@@ -2,54 +2,124 @@
 #include <stdbool.h>
 #include <string.h>
 #include <ctype.h>
+#include <sys/types.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <stdlib.h> 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+char cwd[1024];
+
+//command struct
 struct Command{
 	char *name;
 	int code;
 };
 
+//array of stucts to store commands and their opcodes
 struct Command dict[] = {
 	{"error", -1},
 	{"exit", 0},
-	{"ls", 2}
+	{"ls", 2},
+	{"pwd", 3}
 };
 
-int parser(char* cmd){
-	char command[255];
 
-	sscanf(cmd, "%s", command);
-	
-	for (unsigned long i = 0; i < sizeof(dict)/sizeof(dict[0]); i++){
-		if(strcmp(dict[i].name, command) == 0){
-			return dict[i].code;
-		}
+//function to handle ls
+void handle_ls(char* remaining){
+	if (remaining != NULL){
+		
+	} else{
+		printf("");
 	}
-	return -1;
 }
 
+void handle_pwd(){
+	printf("%s", cwd);
+}
+
+//function to parse the command from user input
+int parser(char* cmd){
+	//store the command locally
+	char command[255];
+
+	//opcode variable
+	int opcode;
+
+	//get the base command
+	sscanf(cmd, "%s", command);
+	
+	//get the rest of the command
+	char *remaining_cmd = strchr(cmd, ' ');
+
+	//grab the rest of the command using some pointer arithmetic
+	if(remaining_cmd != NULL){
+		remaining_cmd++;
+		printf("Remaining: %s\n", remaining_cmd);
+	}
+
+	printf("Remaining: %s\n", remaining_cmd);
+	
+	//loop through the array of structs to find the command	
+	for (unsigned long i = 0; i < sizeof(dict)/sizeof(dict[0]); i++){
+		if(strcmp(dict[i].name, command) == 0){
+			opcode =  dict[i].code;
+		}
+	}
+
+	//if opcode is less than 1 (exit or error) then return
+	if(opcode < 1){
+		return opcode;
+		
+		//if opcode is anything else, send it to its appropriate function for handling
+	} else if(opcode == 2) {
+		handle_ls(remaining_cmd);
+	}
+	return 1;
+}
+
+
+//main function
 int main(){
+	//get home environment variable
+	char *home = getenv("HOME");
+	 
+	//set current working directory
+	strncat(cwd, home, strlen(home));
+	
+	//variable to store user input
 	char input[1024];
+
+	//default opcode is 1
 	int opcode = 1;
+
+	//loop until exit code is passed
 	while (opcode != 0){
-		printf("shapsh>> ");
-			
+	
+		//show the user that the shell is active
+		printf("shapsh@%s>> ", cwd);
+
+		//use fgets to get user input from standard input the safe way
 		fgets(input, sizeof(input), stdin);
 
+		//remove the newline character from the buffer and replace with a null terminator
 		input[strcspn(input, "\r\n")] = '\0';
 
+		//loop to convert user input to lowercase
 		for(unsigned long i = 0; i < strlen(input); i++){
 			input[i] = tolower((unsigned char)input[i]);
 		}
 
+		//if user input isn't blank, pass user input to the input function
 		if (input[0] != '\0'){
 			opcode = parser(input);
 				
 		}
 
+		//show error for unknown command
 		if (opcode == -1){
-			printf(ANSI_COLOR_RED "An error has occured. Type help for more info." ANSI_COLOR_RESET);
+			printf(ANSI_COLOR_RED "An error has occured. Type help for more info.\n" ANSI_COLOR_RESET);
 		}
 	}
 	return 0;
