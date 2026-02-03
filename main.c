@@ -22,19 +22,92 @@ struct Command dict[] = {
 	{"error", -1},
 	{"exit", 0},
 	{"ls", 2},
-	{"pwd", 3}
+	{"pwd", 3},
+	{"clear", 4}
 };
+
+// The "Comparison" rule for alphabetical order
+int compare_names(const void *a, const void *b) {
+    // We have to cast the void pointers back to char** // and then dereference them to get the actual strings.
+    const char *name1 = *(const char **)a;
+    const char *name2 = *(const char **)b;
+    return strcmp(name1, name2);
+}
 
 
 //function to handle ls
-void handle_ls(char* remaining){
+int handle_ls(char* remaining){
+	//ls with sub commands
 	if (remaining != NULL){
-		
-	} else{
-		printf("");
+
+	//this is for ls
+	} else if(remaining == NULL){
+			//directory array
+			char **dir_arr;
+
+			//directory stream pointer
+			DIR *dir_ptr;
+
+			//directory entry struct
+			struct dirent *entry;
+
+			//max array size
+			int current_max = 25;
+
+			//allocate memory for the dynamic array
+			dir_arr = malloc(current_max * sizeof(char *));
+
+			//if malloc fails return
+			if(dir_arr == NULL){
+				perror(ANSI_COLOR_RED "A call to malloc has failed" ANSI_COLOR_RESET);
+				return -1;
+				
+				//else continue
+			} else{
+				//open the current directory
+					dir_ptr = opendir(cwd);
+					
+					if(dir_ptr == NULL){
+						perror(ANSI_COLOR_RED "The directory could not be opened." ANSI_COLOR_RESET);
+					}
+					int i = 0;
+					while((entry = readdir(dir_ptr)) != NULL){
+							
+						if(i == current_max){
+							current_max += 25;
+							char **temp = realloc(dir_arr, current_max * sizeof(char *));
+
+							if(temp == NULL){
+								perror(ANSI_COLOR_RED "A call to malloc has failed" ANSI_COLOR_RESET);
+								return -1;
+							} else{
+								dir_arr = temp;
+							}
+						}
+
+						dir_arr[i] = strdup(entry->d_name);
+
+						i++;
+					}
+					//sort dir_arr
+					qsort(dir_arr, i, sizeof(char *), compare_names);
+
+					//print elements of array and free
+					for(int j = 0; j < i; j++){
+					// i is your counter from the loop (total number of files found)
+						if(dir_arr[j] != NULL){
+							printf("%s\n", dir_arr[j]);	
+						}
+						free(dir_arr[j]);
+					}
+					closedir(dir_ptr);
+					free(dir_arr);
+			}
 	}
+	return 0;
 }
 
+//print working directory
 void handle_pwd(){
 	printf("%s", cwd);
 }
@@ -56,10 +129,7 @@ int parser(char* cmd){
 	//grab the rest of the command using some pointer arithmetic
 	if(remaining_cmd != NULL){
 		remaining_cmd++;
-		printf("Remaining: %s\n", remaining_cmd);
 	}
-
-	printf("Remaining: %s\n", remaining_cmd);
 	
 	//loop through the array of structs to find the command	
 	for (unsigned long i = 0; i < sizeof(dict)/sizeof(dict[0]); i++){
@@ -75,6 +145,8 @@ int parser(char* cmd){
 		//if opcode is anything else, send it to its appropriate function for handling
 	} else if(opcode == 2) {
 		handle_ls(remaining_cmd);
+	} else if(opcode == 3){
+		handle_pwd();
 	}
 	return 1;
 }
@@ -84,9 +156,15 @@ int parser(char* cmd){
 int main(){
 	//get home environment variable
 	char *home = getenv("HOME");
-	 
-	//set current working directory
-	strncat(cwd, home, strlen(home));
+
+	//bounds checking the home variable
+	 if(strlen(home) < 1000){
+	 	strncat(cwd, home, strlen(home));
+	 } else{
+	 	printf(ANSI_COLOR_RED "A fatal error has occured. The specified home path is too long. Exiting..." ANSI_COLOR_RESET);
+	 	return -1;	
+	 }
+	
 	
 	//variable to store user input
 	char input[1024];
@@ -98,7 +176,7 @@ int main(){
 	while (opcode != 0){
 	
 		//show the user that the shell is active
-		printf("shapsh@%s>> ", cwd);
+		printf("\nshapsh@%s>> ", cwd);
 
 		//use fgets to get user input from standard input the safe way
 		fgets(input, sizeof(input), stdin);
