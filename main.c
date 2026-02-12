@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <stdlib.h> 
+#define ANSI_COLOR_GREEN	"\e[0;32m"
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
@@ -34,12 +35,11 @@ int compare_names(const void *a, const void *b) {
     return strcmp(name1, name2);
 }
 
-
 //function to handle ls
 int handle_ls(char* remaining){
 	//ls with sub commands
-	if (remaining != NULL){
-
+	if (remaining){
+		printf("Test");
 	//this is for ls
 	} else if(remaining == NULL){
 			//directory array
@@ -112,6 +112,12 @@ void handle_pwd(){
 	printf("%s", cwd);
 }
 
+void handle_clear(){
+	for (int i = 0; i < 100; i++){
+		printf("\n");
+	}
+}
+
 //function to parse the command from user input
 int parser(char* cmd){
 	//store the command locally
@@ -147,13 +153,15 @@ int parser(char* cmd){
 		handle_ls(remaining_cmd);
 	} else if(opcode == 3){
 		handle_pwd();
+	} else if(opcode == 4){
+		handle_clear();
 	}
 	return 1;
 }
 
 
 //main function
-int main(){
+int main(void){
 	//get home environment variable
 	char *home = getenv("HOME");
 
@@ -176,7 +184,7 @@ int main(){
 	while (opcode != 0){
 	
 		//show the user that the shell is active
-		printf("\nshapsh@%s>> ", cwd);
+		printf(ANSI_COLOR_GREEN "\nshapsh@%s>> " ANSI_COLOR_RESET, cwd);
 
 		//use fgets to get user input from standard input the safe way
 		fgets(input, sizeof(input), stdin);
